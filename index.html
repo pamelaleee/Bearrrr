@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>自嘲熊｜情緒與吃藥紀錄</title>
+  <style>
+    :root{
+      --bg:#fff8fb; --card:#ffffff; --ink:#3b2e2a; --accent:#ff9bb3; --bear:#7a5b49; --shadow:0 8px 24px rgba(122,91,73,.15);
+      --episode-bg:#fff5ec; --episode-bd:#ffd9b5; --med-bg:#f3fbf5; --med-bd:#cfe8d6; --wake-bg:#f4f8ff; --wake-bd:#cfe0ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+    .container{max-width:520px;margin:0 auto;padding:16px;padding-bottom:96px}
+    h1{margin:12px 0;text-align:center;font-size:22px}
+    .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+    label{display:block;margin:8px 0 4px;font-size:14px}
+    input,select,textarea{width:100%;padding:10px;border:2px solid #f1e5df;border-radius:12px;font-size:16px}
+    textarea{min-height:60px;resize:vertical}
+    .btn{width:100%;background:var(--accent);color:#fff;border:none;padding:12px 16px;border-radius:12px;font-weight:700;margin-top:8px;cursor:pointer}
+    .btn-small{background:#ffeaf1;color:var(--bear);border:none;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;margin-top:4px}
+    .list{margin-top:8px}
+    .item{position:relative;border:2px dashed #f4dfd3;border-radius:14px;padding:12px;margin-bottom:8px;overflow:hidden}
+    .item.type-episode{background:var(--episode-bg);border-color:var(--episode-bd)}
+    .item.type-med{background:var(--med-bg);border-color:var(--med-bd)}
+    .item.type-wake{background:var(--wake-bg);border-color:var(--wake-bd)}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;margin-right:6px}
+    .tag.episode{background:#ffcf9a}
+    .tag.med{background:#bfe7c8}
+    .tag.wake{background:#c8d8ff}
+    .del, .edit{position:absolute;top:10px;border:none;border:1px solid #e8caca;border-radius:8px;padding:4px 8px;cursor:pointer;background:#fff;color:#9c6b6b}
+    .del{right:10px}
+    .edit{right:72px}
+    .hint{font-size:12px;color:#7d6a62}
+
+    .bear-bubble{position:fixed;max-width:70vw;background:#fff;color:var(--ink);border:2px solid #f1e5df;border-radius:14px;padding:10px 12px;box-shadow:var(--shadow);opacity:0;transform:translateY(8px) scale(.98);transition:opacity .18s, transform .18s;z-index:10001;font-size:14px}
+    .bear-bubble.show{opacity:1;transform:translateY(0) scale(1)}
+
+    #cele-wrap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);opacity:0;z-index:700;pointer-events:none;transition:opacity .22s ease, transform .22s ease}
+    #cele-wrap.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    #cele-gif{width:220px;max-width:70vw;display:none}
+    #cele-svg{width:220px;max-width:70vw;display:block}
+
+    .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #f1e5df;box-shadow:0 -4px 16px rgba(0,0,0,.04);z-index:800}
+    .tabbar .inner{max-width:520px;margin:0 auto;display:flex;gap:4px;justify-content:space-between;padding:8px}
+    .tab{flex:1;border:none;background:#fff;border-radius:12px;padding:8px 6px;font-size:12px;color:#7d6a62;display:flex;flex-direction:column;align-items:center;gap:4px}
+    .tab.active{background:#ffeaf1;color:#b34d68;font-weight:700}
+    .tab .icon{font-size:18px}
+
+    .page{display:none}
+    .page.active{display:block}
+
+    #float-quote{position:fixed;right:16px;bottom:96px;width:56px;height:56px;border-radius:50%;background:#ff9bb3;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:750;cursor:grab;touch-action:none}
+    #float-quote span{font-size:26px;line-height:1}
+
+    /* 日曆 */
+    .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .cal-title{font-weight:700}
+    .cal-nav{border:none;background:#ffeaf1;color:#b34d68;border-radius:10px;padding:6px 10px;cursor:pointer}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .cal-cell{background:#fff;border:2px solid #f1e5df;border-radius:12px;min-height:56px;padding:6px;position:relative;cursor:pointer}
+    .cal-cell.out{opacity:.35}
+    .cal-day{font-size:12px;color:#7d6a62}
+    .cal-dots{position:absolute;left:6px;bottom:6px;display:flex;gap:4px}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .dot.wake{background:#c8d8ff}
+    .dot.episode{background:#ffcf9a}
+    .dot.med{background:#bfe7c8}
+    .cal-cell.sel{outline:3px solid #ff9bb3}
+
+    /* 編輯對話框 */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;z-index:1200}
+    .modal{background:#fff;border-radius:16px;box-shadow:var(--shadow);width:min(92vw,520px);padding:16px}
+    .modal h3{margin:0 0 8px 0}
+    .modal .row{margin:8px 0}
+    .modal .actions{display:flex;gap:8px;margin-top:12px}
+    .modal .actions .btn{flex:1}
+    .modal .btn-cancel{background:#eee;color:#555}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>自嘲熊｜情緒與吃藥紀錄</h1>
+
+    <!-- 狀態頁 -->
+    <div class="page active" id="page-episode">
+      <div class="card">
+        <h2>🌀 狀態紀錄</h2>
+        <label>時間</label>
+        <input type="datetime-local" id="ep-time">
+        <button class="btn-small" id="ep-now">現在</button>
+        <label>狀態</label>
+        <select id="ep-type">
+          <option value="躁期">躁期</option>
+          <option value="鬱期">鬱期</option>
+          <option value="混合狀態">混合狀態</option>
+          <option value="焦慮">焦慮</option>
+        </select>
+        <label>情緒量表（1–5）</label>
+        <input type="range" id="mood-score" min="1" max="5" step="1" value="3" oninput="document.getElementById('mood-score-label').textContent=this.value">
+        <div class="hint">目前：<span id="mood-score-label">3</span></div>
+        <label>備註</label>
+        <textarea id="ep-note"></textarea>
+        <button class="btn" id="save-ep">🐻 儲存狀態</button>
+      </div>
+      <div class="card">
+        <h2>📖 狀態紀錄列表</h2>
+        <div class="list" id="list-episode"></div>
+      </div>
+    </div>
+
+    <!-- 起床頁 -->
+    <div class="page" id="page-wake">
+      <div class="card">
+        <h2>🛌 起床時間</h2>
+        <label>時間</label>
+        <input type="datetime-local" id="wake-time">
+        <button class="btn-small" id="wake-now">現在</button>
+        <button class="btn" id="save-wake">🐻 儲存起床</button>
+      </div>
+      <div class="card">
+        <h2>📖 起床紀錄列表</h2>
+        <div class="list" id="list-wake"></div>
+      </div>
+    </div>
+
+    <!-- 吃藥頁 -->
+    <div class="page" id="page-med">
+      <div class="card">
+        <h2>💊 吃藥紀錄</h2>
+        <label><input type="checkbox" id="med-check"> 已吃藥</label>
+        <button class="btn-small" id="med-log" disabled>紀錄吃藥時間</button>
+      </div>
+      <div class="card">
+        <h2>📖 吃藥紀錄列表</h2>
+        <div class="list" id="list-med"></div>
+      </div>
+    </div>
+
+    <!-- 波動頁 -->
+    <div class="page" id="page-mood">
+      <div class="card">
+        <h2>📈 情緒波動</h2>
+        <select id="mood-window">
+          <option value="7">7天</option>
+          <option value="14" selected>14天</option>
+          <option value="30">30天</option>
+        </select>
+        <svg id="mood-chart" viewBox="0 0 360 160" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+
+    <!-- 日曆頁 -->
+    <div class="page" id="page-cal">
+      <div class="card">
+        <div class="cal-head">
+          <button class="cal-nav" id="cal-prev">‹</button>
+          <div class="cal-title" id="cal-title"></div>
+          <button class="cal-nav" id="cal-next">›</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="card">
+        <h2 id="cal-selected-title">📋 當日紀錄</h2>
+        <div class="list" id="cal-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <button id="float-quote"><span>🐻</span></button>
+
+  <!-- 編輯對話框 -->
+  <div class="modal-backdrop" id="edit-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>✏️ 編輯紀錄</h3>
+      <div class="row">
+        <label>時間</label>
+        <input type="datetime-local" id="edit-time">
+      </div>
+      <div class="row" id="edit-episode-only">
+        <label>狀態</label>
+        <select id="edit-type">
+          <option value="躁期">躁期</option>
+          <option value="鬱期">鬱期</option>
+          <option value="混合狀態">混合狀態</option>
+          <option value="焦慮">焦慮</option>
+        </select>
+        <label>情緒量表（1–5）</label>
+        <input type="range" id="edit-mood" min="1" max="5" step="1" value="3" oninput="document.getElementById('edit-mood-label').textContent=this.value">
+        <div class="hint">目前：<span id="edit-mood-label">3</span></div>
+        <label>備註</label>
+        <textarea id="edit-note"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-cancel" id="edit-cancel">取消</button>
+        <button class="btn" id="edit-save">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cele-wrap">
+    <img id="cele-gif" src="v2-e99f8c0b18f6c3f67fb461843a617ae2_1440w.gif" alt="熊熊應援">
+    <svg id="cele-svg" viewBox="0 0 120 120"></svg>
+  </div>
+
+  <nav class="tabbar">
+    <div class="inner">
+      <button class="tab" data-page="page-wake">🛌 起床</button>
+      <button class="tab active" data-page="page-episode">🌀 狀態</button>
+      <button class="tab" data-page="page-med">💊 吃藥</button>
+      <button class="tab" data-page="page-mood">📈 波動</button>
+      <button class="tab" data-page="page-cal">📅 日曆</button>
+    </div>
+  </nav>
+
+  <script>
+  (function(){
+    var KEY='selfDepBear.records.v17';
+    var records=JSON.parse(localStorage.getItem(KEY)||'[]');
+    function save(){ localStorage.setItem(KEY,JSON.stringify(records)); }
+    function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+    function $(id){return document.getElementById(id)}
+    function fmt(dt){ var d=new Date(dt); var p=function(n){return String(n).padStart(2,'0')}; return d.getFullYear()+"/"+p(d.getMonth()+1)+"/"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+    function toLocalInput(d){ var p=function(n){return String(n).padStart(2,'0')}; return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes()) }
+    function sameDay(a,b){ a=new Date(a); b=new Date(b); return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+
+    // 元素
+    var epTime=$('ep-time'), epNow=$('ep-now'), epType=$('ep-type'), epNote=$('ep-note'), moodScore=$('mood-score'), saveEp=$('save-ep'), listEpisode=$('list-episode');
+    var wakeTime=$('wake-time'), wakeNow=$('wake-now'), saveWake=$('save-wake'), listWake=$('list-wake');
+    var medCheck=$('med-check'), medLog=$('med-log'), listMed=$('list-med');
+    var moodWindow=$('mood-window'), moodChart=$('mood-chart');
+    var calTitle=$('cal-title'), calGrid=$('cal-grid'), calList=$('cal-list'), calSelTitle=$('cal-selected-title');
+    var calPrev=$('cal-prev'), calNext=$('cal-next');
+    var floatQuote=$('float-quote');
+
+    // 編輯對話框元素
+    var editBackdrop=$('edit-backdrop'), editTime=$('edit-time'), editOnlyEp=$('edit-episode-only'), editType=$('edit-type'), editMood=$('edit-mood'), editMoodLabel=$('edit-mood-label'), editNote=$('edit-note'), editCancel=$('edit-cancel'), editSave=$('edit-save');
+    var editingId=null;
+
+    // 初始時間
+    if(epTime) epTime.value=toLocalInput(new Date());
+    if(wakeTime) wakeTime.value=toLocalInput(new Date());
+    if(epNow) epNow.onclick=function(){ epTime.value=toLocalInput(new Date()); };
+    if(wakeNow) wakeNow.onclick=function(){ wakeTime.value=toLocalInput(new Date()); };
+
+    // 動作：新增
+    if(saveEp) saveEp.onclick=function(){ if(!epTime.value) return; records.push({id:genId(),type:'episode',time:new Date(epTime.value).toISOString(),episodeType:epType.value,mood:Number(moodScore.value||3),note:epNote.value}); save(); renderAll(); };
+    if(medCheck) medCheck.onchange=function(){ medLog.disabled=!medCheck.checked };
+    if(medLog) medLog.onclick=function(){ if(!medCheck.checked) return; records.push({id:genId(),type:'med',time:new Date().toISOString()}); medCheck.checked=false; medLog.disabled=true; save(); renderAll(); };
+    if(saveWake) saveWake.onclick=function(){ if(!wakeTime.value) return; records.push({id:genId(),type:'wake',time:new Date(wakeTime.value).toISOString()}); save(); renderAll(); };
+
+    // 刪除/編輯按鈕
+    function delBtn(id){ var b=document.createElement('button'); b.className='del'; b.textContent='刪除'; b.onclick=function(){ records=records.filter(function(r){return r.id!==id}); save(); renderAll(); }; return b }
+    function editBtn(id){ var b=document.createElement('button'); b.className='edit'; b.textContent='編輯'; b.onclick=function(){ openEditor(id); }; return b }
+
+    // 分頁渲染
+    function renderEpisode(){ listEpisode.innerHTML=''; records.filter(function(r){return r.type==='episode'}).sort(function(a,b){return new Date(b.time)-new Date(a.time)}).forEach(function(r){ var div=document.createElement('div'); div.className='item type-episode'; var note=r.note?"<div class=\"hint\" style=\"margin-top:6px\">備註：<br>"+String(r.note).replace(/\n/g,'<br>')+"</div>":''; div.innerHTML='<span class="tag episode">狀態</span>🌀 '+fmt(r.time)+'｜'+r.episodeType+'｜量表:'+(r.mood||3)+note; div.appendChild(editBtn(r.id)); div.appendChild(delBtn(r.id)); listEpisode.appendChild(div); }); }
+    function renderWake(){ listWake.innerHTML=''; records.filter(function(r){return r.type==='wake'}).sort(function(a,b){return new Date(b.time)-new Date(a.time)}).forEach(function(r){ var div=document.createElement('div'); div.className='item type-wake'; div.innerHTML='<span class="tag wake">起床</span>🛌 '+fmt(r.time)+'｜起床'; div.appendChild(editBtn(r.id)); div.appendChild(delBtn(r.id)); listWake.appendChild(div); }); }
+    function renderMed(){ listMed.innerHTML=''; records.filter(function(r){return r.type==='med'}).sort(function(a,b){return new Date(b.time)-new Date(a.time)}).forEach(function(r){ var div=document.createElement('div'); div.className='item type-med'; div.innerHTML='<span class="tag med">吃藥</span>💊 '+fmt(r.time)+'｜已吃藥'; div.appendChild(editBtn(r.id)); div.appendChild(delBtn(r.id)); listMed.appendChild(div); }); }
+
+    // 折線圖
+    function renderMood(){ var days=parseInt(moodWindow.value||'14',10); var now=new Date(); var from=new Date(now.getTime()-days*24*60*60*1000); var pts=records.filter(function(r){return r.type==='episode'}).map(function(r){return {t:new Date(r.time),y:Number(r.mood||3)}}).filter(function(p){return p.t>=from&&p.t<=now}).sort(function(a,b){return a.t-b.t}); var W=360,H=160,pad=24; var X=function(d){return pad+((d-from)/(now-from))*(W-2*pad)}; var Y=function(v){return H-pad-((v-1)/4)*(H-2*pad)}; var path=''; for(var i=0;i<pts.length;i++){ path+=(i?' L':'M')+X(pts[i].t)+','+Y(pts[i].y); } var dots=''; for(var j=0;j<pts.length;j++){ dots+='<circle cx="'+X(pts[j].t)+'" cy="'+Y(pts[j].y)+'" r="3" />'; } moodChart.innerHTML='<rect x="1" y="1" width="'+(W-2)+'" height="'+(H-2)+'" rx="12" ry="12" fill="#fff" stroke="#f1e5df" />'+(pts.length?'<path d="'+path+'" fill="none" stroke="#ff9bb3" stroke-width="2" />':'')+'<g fill="#ff9bb3">'+dots+'</g>'; }
+
+    // 日曆
+    var calMonth = new Date(); calMonth.setDate(1);
+    function buildCalendar(){
+      calGrid.innerHTML='';
+      var y=calMonth.getFullYear(), m=calMonth.getMonth();
+      calTitle.textContent = y+' 年 '+(m+1)+' 月';
+      var weekdays=['日','一','二','三','四','五','六'];
+      weekdays.forEach(function(w){ var h=document.createElement('div'); h.textContent=w; h.className='hint'; h.style.textAlign='center'; calGrid.appendChild(h); });
+      var firstDow=(new Date(y,m,1)).getDay();
+      var daysInMonth=new Date(y,m+1,0).getDate();
+      var prevDays=new Date(y,m,0).getDate();
+      for(var i=0;i<42;i++){
+        var cell=document.createElement('div'); cell.className='cal-cell';
+        var dayNum=i-firstDow+1; var cellDate;
+        if(dayNum<1){ cell.classList.add('out'); cellDate=new Date(y,m-1,prevDays+dayNum); }
+        else if(dayNum>daysInMonth){ cell.classList.add('out'); cellDate=new Date(y,m,dayNum); }
+        else { cellDate=new Date(y,m,dayNum); }
+        var dn=document.createElement('div'); dn.className='cal-day'; dn.textContent=cellDate.getDate(); cell.appendChild(dn);
+        var dots=document.createElement('div'); dots.className='cal-dots';
+        var hasWake=records.some(function(r){return r.type==='wake' && sameDay(r.time, cellDate)});
+        var hasEp=records.some(function(r){return r.type==='episode' && sameDay(r.time, cellDate)});
+        var hasMed=records.some(function(r){return r.type==='med' && sameDay(r.time, cellDate)});
+        if(hasWake){ var d=document.createElement('div'); d.className='dot wake'; dots.appendChild(d); }
+        if(hasEp){ var d2=document.createElement('div'); d2.className='dot episode'; dots.appendChild(d2); }
+        if(hasMed){ var d3=document.createElement('div'); d3.className='dot med'; dots.appendChild(d3); }
+        cell.appendChild(dots);
+        (function(date){ cell.onclick=function(){ selectDay(new Date(date.getFullYear(),date.getMonth(),date.getDate())); }; })(cellDate);
+        calGrid.appendChild(cell);
+      }
+    }
+
+    var selDate = new Date();
+    function selectDay(d){ selDate=d; Array.prototype.forEach.call(calGrid.querySelectorAll('.cal-cell'), function(c){ c.classList.remove('sel'); }); Array.prototype.forEach.call(calGrid.children, function(c){ if(c.classList && c.classList.contains('cal-cell')){ var day=c.querySelector('.cal-day'); if(day && Number(day.textContent)==selDate.getDate() && !c.classList.contains('out')) c.classList.add('sel'); }}); renderCalList(); }
+
+    function renderCalList(){
+      calList.innerHTML='';
+      calSelTitle.textContent='📋 '+selDate.getFullYear()+' / '+(selDate.getMonth()+1)+' / '+selDate.getDate()+' 的紀錄';
+      var dayRecs=records.filter(function(r){ return sameDay(r.time, selDate) }).sort(function(a,b){ return new Date(a.time)-new Date(b.time) });
+      if(!dayRecs.length){ calList.innerHTML='<div class="hint">這天沒有紀錄</div>'; return }
+      dayRecs.forEach(function(r){
+        var div=document.createElement('div'); div.className='item type-'+(r.type);
+        var html='';
+        if(r.type==='wake') html='<span class="tag wake">起床</span>🛌 '+fmt(r.time)+'｜起床';
+        if(r.type==='med') html='<span class="tag med">吃藥</span>💊 '+fmt(r.time)+'｜已吃藥';
+        if(r.type==='episode'){
+          var note=r.note?"<div class=\"hint\" style=\"margin-top:6px\">備註：<br>"+String(r.note).replace(/\n/g,'<br>')+"</div>":'';
+          html='<span class="tag episode">狀態</span>🌀 '+fmt(r.time)+'｜'+r.episodeType+'｜量表:'+(r.mood||3)+note;
+        }
+        div.innerHTML=html; div.appendChild(editBtn(r.id)); div.appendChild(delBtn(r.id)); calList.appendChild(div);
+      });
+    }
+
+    if(calPrev) calPrev.onclick=function(){ calMonth.setMonth(calMonth.getMonth()-1); buildCalendar(); selectDay(new Date(calMonth.getFullYear(), calMonth.getMonth(), 1)); };
+    if(calNext) calNext.onclick=function(){ calMonth.setMonth(calMonth.getMonth()+1); buildCalendar(); selectDay(new Date(calMonth.getFullYear(), calMonth.getMonth(), 1)); };
+
+    // 浮窗：拖＋說話（簡版）
+    (function(){ var dragging=false,moved=false,sx=0,sy=0,bx=0,by=0; function start(e){dragging=true;moved=false;var p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; var r=floatQuote.getBoundingClientRect(); bx=r.left; by=r.top; e.preventDefault();} function move(e){ if(!dragging) return; var p=e.touches?e.touches[0]:e; floatQuote.style.left=(bx+p.clientX-sx)+'px'; floatQuote.style.top=(by+p.clientY-sy)+'px'; floatQuote.style.right='auto'; floatQuote.style.bottom='auto'; moved=true;} function end(){ if(!dragging) return; dragging=false;} function speak(){ var msgs=['人已經很努力了，熊看見了。','記下來就少一點混亂，熊替人鼓掌。','辛苦了，人，熊覺得這樣就很棒。']; var msg=msgs[Math.floor(Math.random()*msgs.length)]; var r=floatQuote.getBoundingClientRect(); var bb=document.createElement('div'); bb.className='bear-bubble'; bb.style.left=(r.left-6)+'px'; bb.style.top=(r.top-64)+'px'; bb.textContent=msg; document.body.appendChild(bb); requestAnimationFrame(function(){bb.classList.add('show')}); setTimeout(function(){bb.classList.remove('show')},2000); setTimeout(function(){bb.remove()},2300);} floatQuote.addEventListener('mousedown',start); document.addEventListener('mousemove',move); document.addEventListener('mouseup',end); floatQuote.addEventListener('touchstart',start,{passive:false}); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',end); floatQuote.addEventListener('click',function(){ if(moved) return; speak(); }); })();
+
+    // Tabs
+    var tabs=document.querySelectorAll('.tabbar .tab');
+    var pages=document.querySelectorAll('.page');
+    Array.prototype.forEach.call(tabs, function(t){ t.onclick=function(){ var id=t.getAttribute('data-page'); Array.prototype.forEach.call(pages, function(p){ p.classList.toggle('active', p.id===id); }); Array.prototype.forEach.call(tabs, function(x){ x.classList.toggle('active', x===t); }); if(id==='page-mood') renderMood(); if(id==='page-cal'){ buildCalendar(); selectDay(new Date()); } }; });
+
+    // 編輯器邏輯
+    function openEditor(id){ editingId=id; var rec=records.find(function(r){return r.id===id}); if(!rec) return; editBackdrop.style.display='flex'; editTime.value=toLocalInput(new Date(rec.time)); if(rec.type==='episode'){ editOnlyEp.style.display='block'; editType.value=rec.episodeType||'混合狀態'; editMood.value=Number(rec.mood||3); editMoodLabel.textContent=editMood.value; editNote.value=rec.note||''; } else { editOnlyEp.style.display='none'; } }
+    function closeEditor(){ editBackdrop.style.display='none'; editingId=null; }
+    if(editCancel) editCancel.onclick=closeEditor;
+    if(editBackdrop) editBackdrop.addEventListener('click', function(e){ if(e.target===editBackdrop) closeEditor(); });
+    if(editSave) editSave.onclick=function(){ var rec=records.find(function(r){return r.id===editingId}); if(!rec) return; if(!editTime.value){ alert('請輸入時間'); return } rec.time=new Date(editTime.value).toISOString(); if(rec.type==='episode'){ rec.episodeType=editType.value; rec.mood=Number(editMood.value||3); rec.note=editNote.value||''; } save(); closeEditor(); renderAll(); };
+
+    function renderAll(){ renderEpisode(); renderWake(); renderMed(); renderMood(); buildCalendar(); selectDay(selDate); }
+    // 首次渲染
+    renderAll();
+  })();
+  </script>
+</body>
+</html>
